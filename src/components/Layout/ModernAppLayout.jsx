@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Menu, X } from 'lucide-react';
 import ModernSidebar from './ModernSidebar';
 import ModernHeader from './ModernHeader';
 import UserProfile from '../UserProfile';
@@ -6,10 +7,11 @@ import UserProfile from '../UserProfile';
 export default function ModernAppLayout({ children }) {
   const [darkMode, setDarkMode] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
 
-  // Gestion du thème sombre
+  // Gestion du thème
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -21,10 +23,10 @@ export default function ModernAppLayout({ children }) {
 
   useEffect(() => {
     if (darkMode) {
-      document.documentElement.classList.add('dark');
+      document.documentElement.setAttribute('data-theme', 'dark');
       localStorage.setItem('theme', 'dark');
     } else {
-      document.documentElement.classList.remove('dark');
+      document.documentElement.setAttribute('data-theme', 'light');
       localStorage.setItem('theme', 'light');
     }
   }, [darkMode]);
@@ -32,10 +34,10 @@ export default function ModernAppLayout({ children }) {
   // Gestion responsive
   useEffect(() => {
     const handleResize = () => {
-      const mobile = window.innerWidth < 1024; // lg breakpoint
+      const mobile = window.innerWidth < 1024;
       setIsMobile(mobile);
       if (mobile) {
-        setSidebarCollapsed(true);
+        setSidebarOpen(false);
       }
     };
 
@@ -53,43 +55,65 @@ export default function ModernAppLayout({ children }) {
   }, []);
 
   const toggleSidebar = () => {
-    setSidebarCollapsed(!sidebarCollapsed);
+    if (isMobile) {
+      setSidebarOpen(!sidebarOpen);
+    } else {
+      setSidebarCollapsed(!sidebarCollapsed);
+    }
   };
 
   const toggleTheme = () => {
     setDarkMode(!darkMode);
   };
 
+  const closeSidebar = () => {
+    if (isMobile) {
+      setSidebarOpen(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-secondary">
+    <div className="app-layout">
+      {/* Overlay pour mobile */}
+      {isMobile && sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-30"
+          onClick={closeSidebar}
+        />
+      )}
+
+      {/* Sidebar */}
       <ModernSidebar 
-        isCollapsed={sidebarCollapsed} 
-        onToggle={toggleSidebar}
+        isCollapsed={sidebarCollapsed}
+        isOpen={sidebarOpen}
         isMobile={isMobile}
+        onClose={closeSidebar}
       />
       
+      {/* Main Content */}
       <div 
-        className="transition-all duration-300 ease-in-out"
+        className="main-content"
         style={{
           marginLeft: isMobile ? '0' : (sidebarCollapsed ? '80px' : '280px')
         }}
       >
         <ModernHeader 
           darkMode={darkMode} 
-          setDarkMode={toggleTheme}
+          onToggleTheme={toggleTheme}
           onToggleSidebar={toggleSidebar}
           sidebarCollapsed={sidebarCollapsed}
           isMobile={isMobile}
           onOpenProfile={() => setShowProfile(true)}
         />
         
-        <main className="p-6">
+        <main className="p-6 animate-fade-in">
           <div className="max-w-7xl mx-auto">
             {children}
           </div>
         </main>
       </div>
 
+      {/* User Profile Modal */}
       <UserProfile 
         isOpen={showProfile}
         onClose={() => setShowProfile(false)}
